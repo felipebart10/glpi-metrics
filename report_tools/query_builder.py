@@ -19,15 +19,19 @@ def tickets_report(initial_date, final_date, clean_report=True, convert_seconds=
     first_day = f'{initial_date[:4]}-01-01'
 
     df = pd.read_sql(f"""
-    SELECT t.*, ic.name AS nome_categoria, rt.name AS origem, u.firstname AS nome_tecnico, c.avg_time AS tempo_medio_fechamento, d.avg_time AS tempo_medio_solucao  
+    SELECT t.*, ic.name AS nome_categoria, rt.name AS origem, u.firstname AS nome_tecnico, o.nome_observador, c.avg_time AS tempo_medio_fechamento, d.avg_time AS tempo_medio_solucao  
     FROM glpi_tickets t
+
     LEFT JOIN glpi_itilcategories ic
     ON t.itilcategories_id = ic.id
+
     LEFT JOIN glpi_tickets_users tu
     ON t.id = tu.tickets_id AND
     tu.type = 2
+
     LEFT JOIN glpi_requesttypes rt
     ON t.requesttypes_id = rt.id
+
     LEFT JOIN glpi_users u
     ON u.id = tu.users_id
 
@@ -49,10 +53,22 @@ def tickets_report(initial_date, final_date, clean_report=True, convert_seconds=
         ) d
     ON t.itilcategories_id = d.id
 
+    LEFT JOIN (
+        SELECT DISTINCT t.id, u2.firstname AS nome_observador FROM glpi_tickets t 
+        LEFT JOIN glpi_tickets_users tu2
+        ON t.id = tu2.tickets_id AND
+        tu2.type = 3
+        LEFT JOIN glpi_users u2
+        ON u2.id = tu2.users_id AND
+        (u2.groups_id = 1 OR u2.groups_id = 2) 
+        WHERE (DATE(t.date) BETWEEN %s AND %s)
+        ) o
+    ON t.id = o.id AND o.nome_observador IS NOT NULL
 
     WHERE (DATE(t.date) BETWEEN %s AND %s) AND
-    t.status = 6
-    """, connection, params=[first_day, final_date, first_day, final_date, initial_date, final_date])
+    t.status = 6 
+
+    """, connection, params=[first_day, final_date, first_day, final_date, initial_date, final_date, initial_date, final_date])
 
     # Coluna auxiliar para criar valor de tempo interpretado pelo excel
     df['tempo_fechamento'] = df['close_delay_stat'] / (24*60*60)

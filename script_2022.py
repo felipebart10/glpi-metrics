@@ -4,15 +4,15 @@ from report_tools.query_builder import export_excel
 # # # # # # # # SCRIPT PARA GERAÇÃO DE RELATÓRIOS E NOTAS # # # # # # # #
 
 # Parâmetros
-data_inicial = '2021-10-01'
-data_final = '2021-10-31'
+data_inicial = '2021-08-01'
+data_final = '2021-08-31'
 peso_fechamento = 1
 peso_solucao = 2
 bonus_por_quantidade = 0.5
 excluir_colunas_aux = False
 nome_relatorio_dados = 'dados'
 nome_sumario = 'resumo notas'
-gerar_sumario = True
+gerar_sumario = False
 abrir_excel = True
 
 # Geração do relatório
