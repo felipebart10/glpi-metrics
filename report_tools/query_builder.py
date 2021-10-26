@@ -60,7 +60,8 @@ def tickets_report(initial_date, final_date, clean_report=True, convert_seconds=
         tu2.type = 3
         LEFT JOIN glpi_users u2
         ON u2.id = tu2.users_id AND
-        (u2.groups_id = 1 OR u2.groups_id = 2) 
+        (u2.groups_id = 1 OR u2.groups_id = 2) AND
+        u2.id <> 6
         WHERE (DATE(t.date) BETWEEN %s AND %s)
         ) o
     ON t.id = o.id AND o.nome_observador IS NOT NULL

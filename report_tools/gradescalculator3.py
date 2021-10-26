@@ -99,3 +99,24 @@ def grade_summary(data_frame):
     pivot_df = pivot_df.reindex(col_order, axis=1)
     pivot_df = pivot_df.reset_index()
     return pivot_df
+
+def grade_summary_2(data_frame):
+    f = {
+        'id': 'nunique', 
+        'tempo_fechamento': np.mean,
+        'tempo_solucao': np.mean,
+        'nota_final_tempos': np.mean
+    }
+
+    g = data_frame.groupby(['nome_tecnico', 'date'])
+    v1 = g.agg(f)
+    v2 = g.agg(lambda x: x.drop_duplicates(subset='id', keep='first').atraso.sum())
+    new_df = pd.concat([v1, v2.to_frame('atraso')], axis=1)
+    #new_df = new_df.reset_index().rename(columns={'id': 'chamados_atribuidos'})
+
+    g = data_frame.groupby(['nome_observador', 'date'])
+    v3 = g.agg({'id': 'count'})
+    #v3 = v3.reset_index().rename(columns={'id': 'chamados_observados'})
+    final_df = pd.concat([new_df, v3], axis=1)
+    return final_df.reset_index().rename(columns={'id': 'chamados_atribuidos'})
+

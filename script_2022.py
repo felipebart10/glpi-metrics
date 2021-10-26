@@ -1,4 +1,4 @@
-from report_tools.gradescalculator3 import grade_calculator, compute_time_grades, get_monthly_quantity_bonus, average_grade, grade_summary
+from report_tools.gradescalculator3 import grade_calculator, compute_time_grades, get_monthly_quantity_bonus, average_grade, grade_summary, grade_summary_2
 from report_tools.query_builder import export_excel
 import configparser as cp
 
@@ -35,6 +35,6 @@ export_excel(df, nome_relatorio_dados, start_file=abrir_excel)
 
 # Geração do sumário
 if gerar_sumario:
-    pivot_df = grade_summary(df)
+    pivot_df = grade_summary_2(df)
     export_excel(pivot_df, nome_sumario, start_file=abrir_excel)
 
