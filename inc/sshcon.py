@@ -10,21 +10,14 @@ parser = cp.ConfigParser()
 parser.read('config.ini')
 
 ### PARÂMETROS ###
-# ssh_host = '192.168.2.24'
-# ssh_username = "adm13"
-# ssh_password = "Solo-322"
-# database_username = 'glpi'
-# database_password = "j19$29#glpi"
-# database_name = 'glpi'
-# localhost = '127.0.0.1'
 
-ssh_host = str(parser['PARAMETERS']['ssh_host'])
-ssh_username = str(parser['PARAMETERS']['ssh_username'])
-ssh_password = str(parser['PARAMETERS']['ssh_password'])
-database_username = str(parser['PARAMETERS']['database_username'])
-database_password = str(parser['PARAMETERS']['database_password'])
-database_name = str(parser['PARAMETERS']['database_name'])
-localhost = str(parser['PARAMETERS']['localhost'])
+ssh_host = str(parser['CONNECTION PARAMETERS']['ssh_host'])
+ssh_username = str(parser['CONNECTION PARAMETERS']['ssh_username'])
+ssh_password = str(parser['CONNECTION PARAMETERS']['ssh_password'])
+database_username = str(parser['CONNECTION PARAMETERS']['database_username'])
+database_password = str(parser['CONNECTION PARAMETERS']['database_password'])
+database_name = str(parser['CONNECTION PARAMETERS']['database_name'])
+localhost = str(parser['CONNECTION PARAMETERS']['localhost'])
 
 def open_ssh_tunnel(verbose=False):
     """Open an SSH tunnel and connect using a username and password.

@@ -1,19 +1,23 @@
 from report_tools.gradescalculator3 import grade_calculator, compute_time_grades, get_monthly_quantity_bonus, average_grade, grade_summary
 from report_tools.query_builder import export_excel
+import configparser as cp
+
+parser = cp.ConfigParser()
+parser.read('config.ini')
 
 # # # # # # # # SCRIPT PARA GERAÇÃO DE RELATÓRIOS E NOTAS # # # # # # # #
 
 # Parâmetros
-data_inicial = '2021-08-01'
-data_final = '2021-08-31'
-peso_fechamento = 1
-peso_solucao = 2
-bonus_por_quantidade = 0.5
-excluir_colunas_aux = False
-nome_relatorio_dados = 'dados'
-nome_sumario = 'resumo notas'
-gerar_sumario = False
-abrir_excel = True
+data_inicial = parser['REPORT PARAMETERS']['data_inicial']
+data_final = parser['REPORT PARAMETERS']['data_final']
+peso_fechamento = float(parser['REPORT PARAMETERS']['peso_fechamento'])
+peso_solucao = float(parser['REPORT PARAMETERS']['peso_solucao'])
+bonus_por_quantidade = float(parser['REPORT PARAMETERS']['bonus_por_quantidade'])
+nome_relatorio_dados = parser['REPORT PARAMETERS']['nome_relatorio_dados']
+nome_sumario = parser['REPORT PARAMETERS']['nome_sumario']
+excluir_colunas_aux = parser.getboolean('REPORT PARAMETERS', 'excluir_colunas_aux')
+gerar_sumario = parser.getboolean('REPORT PARAMETERS', 'gerar_sumario')
+abrir_excel = parser.getboolean('REPORT PARAMETERS', 'abrir_excel')
 
 # Geração do relatório
 df = grade_calculator(data_inicial, data_final)

@@ -1,12 +1,16 @@
 import numpy as np
 from report_tools.query_builder import tickets_report
 from report_tools.query_builder import export_excel
+import configparser as cp
+
+parser = cp.ConfigParser()
+parser.read('config.ini')
 
 # # # # # # # # # # # # # # # # SCRIPT PARA GERAÇÃO DE NOTAS - 2021 # # # # # # # # # # # # # # # # #
 
 # Parâmetros
-data_inicial = '2021-08-01'
-data_final = '2021-08-31'
+data_inicial = str(parser['REPORT PARAMETERS']['data_inicial'])
+data_final = str(parser['REPORT PARAMETERS']['data_final'])
 
 # Geração de relatório
 df = tickets_report(data_inicial, data_final)

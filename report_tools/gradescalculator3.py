@@ -86,8 +86,8 @@ def grade_summary(data_frame):
     e recebermos a nota automaticamente através de uma outra planilha de fórmulas.
     
     :param data_frame: data frame base para formatação das notas resumidas mensalmente."""
-    pivot_df = data_frame.pivot_table(['id', 'tempo_fechamento', 'tempo_solucao', 'atraso', 'nota_final_tempos'], index=['nome_tecnico', 'date'],
-                                      aggfunc={'id': 'count',
+    pivot_df = data_frame.pivot_table(['id', 'nome_observador', 'tempo_fechamento', 'tempo_solucao', 'atraso', 'nota_final_tempos'], index=['nome_tecnico', 'date'],
+                                      aggfunc={'id': 'nunique', 
                                                'tempo_fechamento': np.mean,
                                                'tempo_solucao': np.mean,
                                                'atraso': 'sum',
