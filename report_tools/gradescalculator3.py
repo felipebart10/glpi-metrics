@@ -19,7 +19,6 @@ def grade_calculator(initial_date, final_date):
 
     return df
 
-
 def compute_time_grades(data_frame, col_name, excluir_coluna=True):
     """Calcula a nota dos valores de tempo desejados
 
@@ -38,7 +37,6 @@ def compute_time_grades(data_frame, col_name, excluir_coluna=True):
     if excluir_coluna:
         data_frame.drop(columns=f'delta_tempo_{col_name}', inplace=True)
 
-
 def average_grade(data_frame, peso_fechamento=1, peso_solucao=1, excluir_coluna=True):
     """Calcula a média das notas dos tempos de acordo com os pesos repassados)
     
@@ -54,7 +52,6 @@ def average_grade(data_frame, peso_fechamento=1, peso_solucao=1, excluir_coluna=
     if excluir_coluna:
         data_frame.drop(columns=['delta_tempo_fechamento_normalized',
                         'delta_tempo_solucao_normalized'], inplace=True)
-
 
 def get_monthly_quantity_bonus(data_frame, bonus_percentual=0.2, excluir_coluna=True):
     """Calcula o bônus devido a quantidade.
@@ -76,7 +73,6 @@ def get_monthly_quantity_bonus(data_frame, bonus_percentual=0.2, excluir_coluna=
     
     if excluir_coluna:
         data_frame.drop(columns='bonus', inplace=True)
-
 
 def grade_summary(data_frame):
     """Gera o sumário das notas por mês
