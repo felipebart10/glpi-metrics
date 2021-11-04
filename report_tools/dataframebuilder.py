@@ -104,6 +104,24 @@ class DataFrameBuilder:
 
         self.df = df
 
+    def tickets_report_actualtime(self, convert_seconds=True):
+        """Gera relatório de chamados do período desejado
+
+        :param initial_date: data inicial na forma yyyy-mm-dd
+        :param final_date: data final na forma yyyy-mm-dd
+        :param clean_report: opção de limpar ou não o relatório, removento colunas inutilizadas.
+        :param convert_seconds: opção para converter os segundos em número de série de data/hora usados no excel"""
+
+        open_ssh_tunnel()
+        connection = mysql_connect()
+
+        df = pd.read_sql(f"""
+        SELECT t.id, u.name, sum(att.actual_actiontime) as total_actiontime FROM glpi_tickets t LEFT JOIN glpi_tickettasks tt ON t.id = tt.tickets_id LEFT JOIN glpi_tickets_users tu ON t.id = tu.tickets_id AND tu.type = 2 LEFT JOIN glpi_users u ON u.id = tu.users_id LEFT JOIN glpi_plugin_actualtime_tasks att ON tt.id = att.tasks_id WHERE (DATE(t.date) BETWEEN %s AND %s) GROUP BY t.id, tt.users_id
+
+        """, connection, params=[self.initial_date, self.final_date])
+
+        self.df = df
+
     def export_excel(self, start_file=True):
         """Exporta um dataframe do pandas para arquivo em excel.
 
