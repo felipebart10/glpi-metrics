@@ -1,4 +1,5 @@
 import datetime
+from typing import final
 import numpy as np
 import pandas as pd
 from inc.sshcon import mysql_connect, open_ssh_tunnel
@@ -208,30 +209,6 @@ class DataFrameBuilder:
             data_frame.drop(columns='bonus', inplace=True)
 
     def grade_summary(self):
-        """Gera o sumário das notas por mês
-
-        Esta função irá gerar uma pivot_table do pandas com o intuito de gerar os dados de forma previamente resumida, sem a necessidade
-        de manipulação de tabelas dinâmicas do excel. O objetivo é criar uma base de dados padronizada para no futuro apenas atualizarmos essa base
-        e recebermos a nota automaticamente através de uma outra planilha de fórmulas.
-
-        :param data_frame: data frame base para formatação das notas resumidas mensalmente."""
-        data_frame = self.df
-        pivot_df = data_frame.pivot_table(['id', 'nome_observador', 'tempo_fechamento', 'tempo_solucao', 'atraso', 'nota_final_tempos'], index=['nome_tecnico', 'date'],
-                                          aggfunc={'id': 'nunique',
-                                                   'tempo_fechamento': np.mean,
-                                                   'tempo_solucao': np.mean,
-                                                   'atraso': 'sum',
-                                                   'nota_final_tempos': np.mean
-                                                   })
-
-        col_order = ['id', 'atraso', 'tempo_fechamento',
-                     'tempo_solucao', 'nota_final_tempos']
-        pivot_df.reset_index()
-        pivot_df = pivot_df.reindex(col_order, axis=1)
-        pivot_df = pivot_df.reset_index()
-        return pivot_df
-
-    def grade_summary_2(self):
         f = {
             'id': 'nunique',
             'tempo_fechamento': np.mean,
@@ -252,8 +229,12 @@ class DataFrameBuilder:
         v3 = g.agg({'id': 'count'})
         #v3 = v3.reset_index().rename(columns={'id': 'chamados_observados'})
         final_df = pd.concat([new_df, v3], axis=1)
-        self.df = final_df.reset_index().rename(
-            columns={'id': 'chamados_atribuidos'})
+        final_df = final_df.reset_index()
+        final_df = final_df.rename(columns={
+            'level_0': 'nome',
+            'id': 'qtde_chamados'
+        })
+        self.df = final_df
 
     def quick_report(self):
         self.tickets_report()
@@ -271,5 +252,5 @@ class DataFrameBuilder:
         self.compute_time_grades('solucao')
         self.average_grade()
         self.get_monthly_quantity_bonus()
-        self.grade_summary_2()
+        self.grade_summary()
         self.export_excel()

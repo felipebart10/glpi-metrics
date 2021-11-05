@@ -18,7 +18,7 @@ df = tickets_report(data_inicial, data_final)
 df['date'] = df['date'].dt.strftime('%Y-%m')
 
 pivot_df = df.pivot_table(['id', 'tempo_fechamento', 'tempo_solucao', 'tempo_medio_solucao', 'atraso'], index=['nome_tecnico', 'date'],
-                            aggfunc={'id': 'count',
+                            aggfunc={'id': lambda x: len(x.unique()),
                                     'tempo_fechamento': np.mean,
                                     'tempo_solucao': np.mean,
                                     'tempo_medio_solucao': np.mean,
