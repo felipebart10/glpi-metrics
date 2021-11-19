@@ -1,5 +1,4 @@
 import datetime
-from typing import final
 import numpy as np
 import pandas as pd
 from inc.sshcon import mysql_connect, open_ssh_tunnel

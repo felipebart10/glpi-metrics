@@ -17,5 +17,5 @@ df = pd.concat(df_list)
 df_pivot = grade_summary(df)
 
 export_excel(df, 'grades', start_file=True)
-export_excel(df_pivot, 'summary', start_file=True)
+#export_excel(df_pivot, 'summary', start_file=True)
 
