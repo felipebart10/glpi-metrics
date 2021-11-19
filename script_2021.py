@@ -1,6 +1,6 @@
 import numpy as np
-from report_tools.query_builder import tickets_report
-from report_tools.query_builder import export_excel
+from tools.query_builder import tickets_report
+from tools.query_builder import export_excel
 import configparser as cp
 
 parser = cp.ConfigParser()

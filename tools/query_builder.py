@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from os import startfile
 import datetime
-from inc.sshcon import mysql_connect, open_ssh_tunnel
+from .databaseconnector import DataBaseConnector
 
 def tickets_report(initial_date, final_date, clean_report=True, convert_seconds=True):
     """Gera relatório de chamados do período desejado
@@ -13,8 +13,10 @@ def tickets_report(initial_date, final_date, clean_report=True, convert_seconds=
     :param clean_report: opção de limpar ou não o relatório, removento colunas inutilizadas.
     :param convert_seconds: opção para converter os segundos em número de série de data/hora usados no excel"""
     
-    open_ssh_tunnel()
-    connection = mysql_connect()
+    con = DataBaseConnector()
+    con.set_ssh_tunnel()
+    con.set_database_connection()
+    connection = con.get_database_connection()
 
     first_day = f'{initial_date[:4]}-01-01'
 
@@ -93,6 +95,9 @@ def tickets_report(initial_date, final_date, clean_report=True, convert_seconds=
     if clean_report:
         df.drop(labels=['name', 'date_mod', 'users_id_lastupdater', 'content', 'global_validation', 'ola_waiting_duration', 'olas_id_tto', 'olas_id_ttr', 'olalevels_id_ttr',
                         'internal_time_to_resolve', 'internal_time_to_own', 'validation_percent', 'requesttypes_id'], axis=1, inplace=True)
+
+    con.close_database_connection
+    con.close_ssh_tunnel
 
     return df
 

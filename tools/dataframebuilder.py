@@ -1,16 +1,29 @@
 import datetime
 import numpy as np
 import pandas as pd
-from inc.sshcon import mysql_connect, open_ssh_tunnel
 from os import startfile
 
 
 class DataFrameBuilder:
-    def __init__(self, initial_date: str, final_date: str, label: str, relatorio_limpo: bool = True):
+    """Classe para criação de relatórios personalizados
+
+    Com esta classe, é possível montar relatórios selecionando quais informações serão mantidas ou não. Ela também
+    auxilia na segregação do código, pois facilita a adição de novas informações ao relatório através de métodos
+    que podem ser adicionados.
+
+    Atributos:
+        connection: conexão a qual se deseja usar para extrair dados
+        initial_date: data inicial dos dados
+        final_date: data final dos dados
+        label: nome do arquivo a ser exportado
+        relatorio_limpo: variável booleana para definir se as colunas inutilizadas serão excluídas ou mantidas.
+    """
+    def __init__(self, connection, initial_date: str, final_date: str, label: str, relatorio_limpo: bool = True):
+        self.connection = connection
         self.initial_date = initial_date
         self.final_date = final_date
         self.label = f"{label.replace(' ','_')}_{datetime.date.today()}.xlsx"
-        self.relatorio_limpo = relatorio_limpo
+        self.relatorio_limpo = relatorio_limpo       
 
     def tickets_report(self, convert_seconds=True):
         """Gera relatório de chamados do período desejado
@@ -19,9 +32,6 @@ class DataFrameBuilder:
         :param final_date: data final na forma yyyy-mm-dd
         :param clean_report: opção de limpar ou não o relatório, removento colunas inutilizadas.
         :param convert_seconds: opção para converter os segundos em número de série de data/hora usados no excel"""
-
-        open_ssh_tunnel()
-        connection = mysql_connect()
 
         first_day = f'{self.initial_date[:4]}-01-01'
 
@@ -76,7 +86,7 @@ class DataFrameBuilder:
         WHERE (DATE(t.date) BETWEEN %s AND %s) AND
         t.status = 6 
 
-        """, connection, params=[first_day, self.final_date, first_day, self.final_date, self.initial_date, self.final_date, self.initial_date, self.final_date])
+        """, self.connection, params=[first_day, self.final_date, first_day, self.final_date, self.initial_date, self.final_date, self.initial_date, self.final_date])
 
         # Coluna auxiliar para criar valor de tempo interpretado pelo excel
         df['tempo_fechamento'] = df['close_delay_stat'] / (24*60*60)
@@ -105,20 +115,19 @@ class DataFrameBuilder:
         self.df = df
 
     def tickets_report_actualtime(self, convert_seconds=True):
-        """Gera relatório de chamados do período desejado
+        """Gera relatório de chamados do período desejado com tempos do ActualTime (em desenvolvimento)
 
         :param initial_date: data inicial na forma yyyy-mm-dd
         :param final_date: data final na forma yyyy-mm-dd
         :param clean_report: opção de limpar ou não o relatório, removento colunas inutilizadas.
         :param convert_seconds: opção para converter os segundos em número de série de data/hora usados no excel"""
 
-        open_ssh_tunnel()
-        connection = mysql_connect()
+
 
         df = pd.read_sql(f"""
         SELECT t.id, u.name, sum(att.actual_actiontime) as total_actiontime FROM glpi_tickets t LEFT JOIN glpi_tickettasks tt ON t.id = tt.tickets_id LEFT JOIN glpi_tickets_users tu ON t.id = tu.tickets_id AND tu.type = 2 LEFT JOIN glpi_users u ON u.id = tu.users_id LEFT JOIN glpi_plugin_actualtime_tasks att ON tt.id = att.tasks_id WHERE (DATE(t.date) BETWEEN %s AND %s) GROUP BY t.id, tt.users_id
 
-        """, connection, params=[self.initial_date, self.final_date])
+        """, self.connection, params=[self.initial_date, self.final_date])
 
         self.df = df
 
