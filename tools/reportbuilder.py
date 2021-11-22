@@ -4,7 +4,7 @@ import pandas as pd
 from os import startfile
 
 
-class DataFrameBuilder:
+class ReportBuilder:
     """Classe para criação de relatórios personalizados
 
     Com esta classe, é possível montar relatórios selecionando quais informações serão mantidas ou não. Ela também
@@ -35,58 +35,22 @@ class DataFrameBuilder:
 
         first_day = f'{self.initial_date[:4]}-01-01'
 
-        df = pd.read_sql(f"""
-        SELECT t.*, ic.name AS nome_categoria, rt.name AS origem, u.firstname AS nome_tecnico, o.nome_observador, c.avg_time AS tempo_medio_fechamento, d.avg_time AS tempo_medio_solucao  
-        FROM glpi_tickets t
+        query = open("setup/tickets_query.sql", "r").read()
 
-        LEFT JOIN glpi_itilcategories ic
-        ON t.itilcategories_id = ic.id
-
-        LEFT JOIN glpi_tickets_users tu
-        ON t.id = tu.tickets_id AND
-        tu.type = 2
-
-        LEFT JOIN glpi_requesttypes rt
-        ON t.requesttypes_id = rt.id
-
-        LEFT JOIN glpi_users u
-        ON u.id = tu.users_id
-
-        LEFT JOIN (
-            SELECT ic.id, ic.completename, avg(t.close_delay_stat) AS avg_time FROM glpi_tickets t 
-            LEFT JOIN glpi_itilcategories ic 
-            ON t.itilcategories_id = ic.id 
-            WHERE (DATE(t.date) BETWEEN %s AND %s)
-            GROUP BY t.itilcategories_id
-            ) c
-        ON t.itilcategories_id = c.id    
-
-        LEFT JOIN (
-            SELECT ic.id, ic.completename, avg(t.solve_delay_stat) AS avg_time FROM glpi_tickets t 
-            LEFT JOIN glpi_itilcategories ic 
-            ON t.itilcategories_id = ic.id 
-            WHERE (DATE(t.date) BETWEEN %s AND %s)
-            GROUP BY t.itilcategories_id
-            ) d
-        ON t.itilcategories_id = d.id
-
-        LEFT JOIN (
-            SELECT DISTINCT t.id, u2.firstname AS nome_observador FROM glpi_tickets t 
-            LEFT JOIN glpi_tickets_users tu2
-            ON t.id = tu2.tickets_id AND
-            tu2.type = 3
-            LEFT JOIN glpi_users u2
-            ON u2.id = tu2.users_id AND
-            (u2.groups_id = 1 OR u2.groups_id = 2) AND
-            u2.id <> 6
-            WHERE (DATE(t.date) BETWEEN %s AND %s)
-            ) o
-        ON t.id = o.id AND o.nome_observador IS NOT NULL
-
-        WHERE (DATE(t.date) BETWEEN %s AND %s) AND
-        t.status = 6 
-
-        """, self.connection, params=[first_day, self.final_date, first_day, self.final_date, self.initial_date, self.final_date, self.initial_date, self.final_date])
+        df = pd.read_sql_query(
+            sql=query,
+            con=self.connection,
+            params=[
+                first_day,
+                self.final_date,
+                first_day,
+                self.final_date,
+                self.initial_date,
+                self.final_date,
+                self.initial_date,
+                self.final_date
+                ]
+            )
 
         # Coluna auxiliar para criar valor de tempo interpretado pelo excel
         df['tempo_fechamento'] = df['close_delay_stat'] / (24*60*60)
@@ -117,17 +81,23 @@ class DataFrameBuilder:
     def tickets_report_actualtime(self, convert_seconds=True):
         """Gera relatório de chamados do período desejado com tempos do ActualTime (em desenvolvimento)
 
+        Irá retornar o tempo total que cada técnico gastou em cada um dos chamados,
+        somando o total de tarefas deste técnico no respectivo chamado. A query não retornará
+        tarefas que não tenham um técnico atribuído, nem tarefas que não possuam tempo cronometrado
+        ou tempo escolhido através do dropdown nativo do GLPI.
+
         :param initial_date: data inicial na forma yyyy-mm-dd
         :param final_date: data final na forma yyyy-mm-dd
         :param clean_report: opção de limpar ou não o relatório, removento colunas inutilizadas.
         :param convert_seconds: opção para converter os segundos em número de série de data/hora usados no excel"""
 
+        query = open("setup/tickets_query.sql", "r").read()
 
-
-        df = pd.read_sql(f"""
-        SELECT t.id, u.name, sum(att.actual_actiontime) as total_actiontime FROM glpi_tickets t LEFT JOIN glpi_tickettasks tt ON t.id = tt.tickets_id LEFT JOIN glpi_tickets_users tu ON t.id = tu.tickets_id AND tu.type = 2 LEFT JOIN glpi_users u ON u.id = tu.users_id LEFT JOIN glpi_plugin_actualtime_tasks att ON tt.id = att.tasks_id WHERE (DATE(t.date) BETWEEN %s AND %s) GROUP BY t.id, tt.users_id
-
-        """, self.connection, params=[self.initial_date, self.final_date])
+        df = pd.read_sql_query(
+            sql=query,
+            con=self.connection,
+            params=[self.initial_date, self.final_date]
+            )
 
         self.df = df
 
@@ -147,9 +117,6 @@ class DataFrameBuilder:
     def grade_calculator(self):
         """
             Prepara o relatório para cálculo dos diversos parâmetros necessários na definição da nota
-
-            :param initial_date str: Data inicial
-            :param final_date str: Data final
             :returns: retorna um dataframe do pandas  
 
         """
