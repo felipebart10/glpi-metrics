@@ -18,38 +18,30 @@ class ReportBuilder:
         label: nome do arquivo a ser exportado
         relatorio_limpo: variável booleana para definir se as colunas inutilizadas serão excluídas ou mantidas.
     """
-    def __init__(self, connection, initial_date: str, final_date: str, label: str, relatorio_limpo: bool = True):
+    def __init__(self, connection, initial_date: str, final_date: str, relatorio_limpo: bool = True, convert_seconds: bool = True):
         self.connection = connection
         self.initial_date = initial_date
         self.final_date = final_date
-        self.label = f"{label.replace(' ','_')}_{datetime.date.today()}.xlsx"
-        self.relatorio_limpo = relatorio_limpo       
+        self.relatorio_limpo = relatorio_limpo
+        self.convert_seconds = convert_seconds       
 
-    def tickets_report(self, convert_seconds=True):
+    def tickets_report(self):
         """Gera relatório de chamados do período desejado
 
-        :param initial_date: data inicial na forma yyyy-mm-dd
-        :param final_date: data final na forma yyyy-mm-dd
-        :param clean_report: opção de limpar ou não o relatório, removento colunas inutilizadas.
         :param convert_seconds: opção para converter os segundos em número de série de data/hora usados no excel"""
 
         first_day = f'{self.initial_date[:4]}-01-01'
 
-        query = open("setup/tickets_query.sql", "r").read()
+        query = open("setup/query_ticket_assigned.sql", "r").read()
 
         df = pd.read_sql_query(
             sql=query,
             con=self.connection,
-            params=[
-                first_day,
-                self.final_date,
-                first_day,
-                self.final_date,
-                self.initial_date,
-                self.final_date,
-                self.initial_date,
-                self.final_date
-                ]
+            params={
+                "first_day": first_day,
+                "initial_date": self.initial_date,
+                "final_date": self.final_date
+                }
             )
 
         # Coluna auxiliar para criar valor de tempo interpretado pelo excel
@@ -61,7 +53,7 @@ class ReportBuilder:
             (24*60*60)
         # Retorna apenas a data, removendo o horário da data do chamado
         #df['date'] = df['date'].dt.date
-        if convert_seconds:
+        if self.convert_seconds:
             df['close_delay_stat'] = pd.to_datetime(df["close_delay_stat"], unit='s').dt.strftime(
                 "%H:%M:%S")  # transforma o tempo de fechamento de segundos para formato de horário
             df['solve_delay_stat'] = pd.to_datetime(df["solve_delay_stat"], unit='s').dt.strftime(
@@ -75,10 +67,13 @@ class ReportBuilder:
         if self.relatorio_limpo:
             df.drop(labels=['name', 'date_mod', 'users_id_lastupdater', 'content', 'global_validation', 'ola_waiting_duration', 'olas_id_tto', 'olas_id_ttr', 'olalevels_id_ttr',
                             'internal_time_to_resolve', 'internal_time_to_own', 'validation_percent', 'requesttypes_id'], axis=1, inplace=True)
+            df = df[df.nome_tecnico != 'Pedro']
+            df['date'] = pd.to_datetime(df['date'])
+            df['date'] = df['date'].dt.strftime('%Y-%m')
 
         self.df = df
 
-    def tickets_report_actualtime(self, convert_seconds=True):
+    def tickets_report_actualtime(self):
         """Gera relatório de chamados do período desejado com tempos do ActualTime (em desenvolvimento)
 
         Irá retornar o tempo total que cada técnico gastou em cada um dos chamados,
@@ -91,40 +86,31 @@ class ReportBuilder:
         :param clean_report: opção de limpar ou não o relatório, removento colunas inutilizadas.
         :param convert_seconds: opção para converter os segundos em número de série de data/hora usados no excel"""
 
-        query = open("setup/tickets_query.sql", "r").read()
+        query = open("setup/query_actualtime.sql", "r").read()
 
         df = pd.read_sql_query(
             sql=query,
             con=self.connection,
-            params=[self.initial_date, self.final_date]
+            params={"initial_date":self.initial_date, "final_date":self.final_date}
             )
+        
+        df['tempo_eleito'] = np.where(df['tempo_via_plugin'].isnull(), df['tempo_via_glpi'], df['tempo_via_plugin'])
+        df['tempo_eleito'] = df['tempo_eleito'] / (24*60*60)
 
         self.df = df
 
-    def export_excel(self, start_file=True):
+    def export_excel(self, label, start_file=True):
         """Exporta um dataframe do pandas para arquivo em excel.
 
-        :param data_frame: data_frame que se deseja exportar
         :param label: nome base do arquivo para salvamento. A função automaticamente remove espaços vazios e os substitui por '_', além de inserir a data no final
-        :param star_file: opção de iniciar o arquivo no excel ou apenas salvá-lo sem abrir a aplicação.
+        :param start_file: opção de iniciar o arquivo no excel ou apenas salvá-lo sem abrir a aplicação.
         """
-        file_name = f".\\reports\\{self.label}"
+        label = f"{label.replace(' ','_')}_{datetime.date.today()}.xlsx"
+        file_name = f".\\reports\\{label}"
         self.df.to_excel(file_name, index=False)
         print(f'Arquivo salvo em: {file_name}')
         if start_file:
             startfile(file_name)
-
-    def grade_calculator(self):
-        """
-            Prepara o relatório para cálculo dos diversos parâmetros necessários na definição da nota
-            :returns: retorna um dataframe do pandas  
-
-        """
-        self.df = self.df[self.df.nome_tecnico != 'Pedro']
-        self.df['date'] = pd.to_datetime(self.df['date'])
-        self.df['date'] = self.df['date'].dt.strftime('%Y-%m')
-
-        return self.df
 
     def compute_time_grades(self, col_name):
         """Calcula a nota dos valores de tempo desejados
@@ -151,7 +137,6 @@ class ReportBuilder:
         :param data_frame: dataFrame a ser utilizado
         :param peso_fechamento: peso atribuiído a nota do tempo de fechamento chamado (padrão=1)
         :param peso_solucao: peso atribuído a nota de solução do chamado (padrão=1)
-        :param ecluir_conta =  opção de if a camera do celular
         """
         data_frame = self.df
         data_frame['nota_final_tempos'] = (data_frame['delta_tempo_fechamento_normalized'] * peso_fechamento +
@@ -198,34 +183,32 @@ class ReportBuilder:
         v2 = g.agg(lambda x: x.drop_duplicates(
             subset='id', keep='first').atraso.sum())
         new_df = pd.concat([v1, v2.to_frame('atraso')], axis=1)
-        #new_df = new_df.reset_index().rename(columns={'id': 'chamados_atribuidos'})
-
-        g = data_frame.groupby(['nome_observador', 'date'])
-        v3 = g.agg({'id': 'count'})
-        #v3 = v3.reset_index().rename(columns={'id': 'chamados_observados'})
-        final_df = pd.concat([new_df, v3], axis=1)
-        final_df = final_df.reset_index()
-        final_df = final_df.rename(columns={
-            'level_0': 'nome',
-            'id': 'qtde_chamados'
-        })
-        self.df = final_df
+        new_df = new_df.reset_index()
+        self.df = new_df
+        if 'nome_observador' in self.df.columns:
+            g = data_frame.groupby(['nome_observador', 'date'])
+            v3 = g.agg({'id': 'count'})
+            final_df = pd.concat([new_df, v3], axis=1)
+            final_df = final_df.reset_index()
+            final_df = final_df.rename(columns={
+                'level_0': 'nome',
+                'id': 'qtde_chamados'
+            })
+            self.df = final_df
 
     def quick_report(self):
         self.tickets_report()
-        self.grade_calculator()
         self.compute_time_grades('fechamento')
         self.compute_time_grades('solucao')
         self.average_grade()
         self.get_monthly_quantity_bonus()
-        self.export_excel()
+        self.export_excel('tickets')
 
     def quick_summary(self):
         self.tickets_report()
-        self.grade_calculator()
         self.compute_time_grades('fechamento')
         self.compute_time_grades('solucao')
         self.average_grade()
         self.get_monthly_quantity_bonus()
         self.grade_summary()
-        self.export_excel()
+        self.export_excel('notas')
