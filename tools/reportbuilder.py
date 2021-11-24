@@ -63,13 +63,14 @@ class ReportBuilder:
         # Coluna tipo booleana que retorna VERDADEIRO caso o ticket tenha atraso
         df['atraso'] = np.logical_or(
             df['solvedate'] > df['time_to_resolve'], df['time_to_resolve'] == "")
+        df['date'] = pd.to_datetime(df['date'])
+        df['date'] = df['date'].dt.strftime('%Y-%m')
         # relatório limpo (coloque o parâmetro clean_report=False caso queira o relatório completo)
         if self.relatorio_limpo:
             df.drop(labels=['name', 'date_mod', 'users_id_lastupdater', 'content', 'global_validation', 'ola_waiting_duration', 'olas_id_tto', 'olas_id_ttr', 'olalevels_id_ttr',
                             'internal_time_to_resolve', 'internal_time_to_own', 'validation_percent', 'requesttypes_id'], axis=1, inplace=True)
             df = df[df.nome_tecnico != 'Pedro']
-            df['date'] = pd.to_datetime(df['date'])
-            df['date'] = df['date'].dt.strftime('%Y-%m')
+
 
         self.df = df
 
@@ -93,7 +94,7 @@ class ReportBuilder:
             con=self.connection,
             params={"initial_date":self.initial_date, "final_date":self.final_date}
             )
-        
+        df.loc[df['tempo_via_plugin'] > 1000000000, 'tempo_via_plugin'] = 0
         df['tempo_eleito'] = np.where(df['tempo_via_plugin'].isnull(), df['tempo_via_glpi'], df['tempo_via_plugin'])
         df['tempo_eleito'] = df['tempo_eleito'] / (24*60*60)
 
@@ -126,18 +127,24 @@ class ReportBuilder:
         data_frame = self.df
         data_frame[f'delta_tempo_{col_name}'] = data_frame[f'tempo_medio_{col_name}'] - \
             data_frame[f'tempo_{col_name}']
-        data_frame[f'delta_tempo_{col_name}_normalized'] = (data_frame[f'delta_tempo_{col_name}'] - data_frame[f'delta_tempo_{col_name}'].min()) / (
-            data_frame[f'delta_tempo_{col_name}'].max() - data_frame[f'delta_tempo_{col_name}'].min())
-        if self.relatorio_limpo:
-            data_frame.drop(columns=f'delta_tempo_{col_name}', inplace=True)
+        data_frame[f'max_mes_{col_name}'] = data_frame.groupby(['date'])[f'delta_tempo_{col_name}'].transform('max')
+        data_frame[f'min_mes_{col_name}'] = data_frame.groupby(['date'])[f'delta_tempo_{col_name}'].transform('min')    
+        data_frame[f'delta_tempo_{col_name}_normalized'] = (data_frame[f'delta_tempo_{col_name}'] - data_frame[f'min_mes_{col_name}']) \
+            / (data_frame[f'max_mes_{col_name}'] - data_frame[f'min_mes_{col_name}'])
+        data_frame[f'diferenca_media_vs_gasto_{col_name}'] = data_frame[f'delta_tempo_{col_name}'] / data_frame[f'tempo_medio_{col_name}']
 
-    def average_grade(self, peso_fechamento=1, peso_solucao=1):
+        if self.relatorio_limpo:           
+            data_frame.drop(columns=[f'max_mes_{col_name}', f'min_mes_{col_name}'], inplace=True)
+
+    def average_grade(self, peso_fechamento=0, peso_solucao=1):
         """Calcula a média das notas dos tempos de acordo com os pesos repassados)
 
         :param data_frame: dataFrame a ser utilizado
         :param peso_fechamento: peso atribuiído a nota do tempo de fechamento chamado (padrão=1)
         :param peso_solucao: peso atribuído a nota de solução do chamado (padrão=1)
         """
+        self.peso_fechamento = peso_fechamento
+        self.peso_solucao = peso_solucao
         data_frame = self.df
         data_frame['nota_final_tempos'] = (data_frame['delta_tempo_fechamento_normalized'] * peso_fechamento +
                                            data_frame['delta_tempo_solucao_normalized'] * peso_solucao) / (peso_fechamento+peso_solucao)
@@ -155,26 +162,33 @@ class ReportBuilder:
         :param data_frame: data frame onde os bônus serão calculados.
         :param excluir_coluna: define se a coluna dos valores de bonificação será excluída ou não do relatório final"""
         data_frame = self.df
-        data_frame['bonus'] = 1+bonus_percentual*(data_frame.groupby(['date', 'nome_tecnico'])['id'].transform('count') - data_frame.groupby(['date', 'nome_tecnico'])['id'].transform('count').min()) / (
-            data_frame.groupby(['date', 'nome_tecnico'])['id'].transform('count').max(
-            ) - data_frame.groupby(['date', 'nome_tecnico'])['id'].transform('count').min()
-        )
+        data_frame['qtde_chamados'] = data_frame.groupby(['date', 'nome_tecnico'])['id'].transform('count')
+        data_frame['bonus'] = 1+bonus_percentual*(data_frame['qtde_chamados'] - data_frame.groupby(['date'])['qtde_chamados'].transform('min')) / (
+            data_frame.groupby(['date'])['qtde_chamados'].transform('max') - data_frame.groupby(['date'])['qtde_chamados'].transform('min'))
         data_frame['nota_final_tempos'] = data_frame['nota_final_tempos'] * \
             data_frame['bonus']
         #data_frame['nota_final_tempos'] = data_frame['nota_final_tempos'].clip(upper=1)
         data_frame['nota_final_tempos'] = (
-            data_frame['nota_final_tempos'] / data_frame['nota_final_tempos'].max())
-
+            data_frame['nota_final_tempos'] / data_frame.groupby(['date'])['nota_final_tempos'].transform('max'))
         if self.relatorio_limpo:
-            data_frame.drop(columns='bonus', inplace=True)
+            data_frame.drop(columns=['bonus', 'qtde_chamados'], inplace=True)
 
     def grade_summary(self):
         f = {
             'id': 'nunique',
             'tempo_fechamento': np.mean,
+            'diferenca_media_vs_gasto_fechamento': np.mean,
             'tempo_solucao': np.mean,
+            'diferenca_media_vs_gasto_solucao': np.mean,
             'nota_final_tempos': np.mean
         }
+        if self.peso_solucao == 0:
+            f.pop('tempo_solucao')
+            f.pop('diferenca_media_vs_gasto_solucao')
+
+        if self.peso_fechamento == 0:
+            f.pop('tempo_fechamento')
+            f.pop('diferenca_media_vs_gasto_fechamento')
 
         data_frame = self.df
 
@@ -212,3 +226,4 @@ class ReportBuilder:
         self.get_monthly_quantity_bonus()
         self.grade_summary()
         self.export_excel('notas')
+
