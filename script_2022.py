@@ -1,17 +1,9 @@
-from tools.databaseconnector import DataBaseConnector
-from tools.reportbuilder import ReportBuilder
+from tools.reportbuilder import TicketReportBuilder
 
-con = DataBaseConnector()
-con.set_ssh_tunnel()
-con.set_database_connection()
-connection = con.get_database_connection()
-
-df1 = ReportBuilder(connection, '2021-10-01', '2021-10-31')
-df1.quick_report()
-
-df2 = ReportBuilder(connection, '2021-10-01', '2021-10-31')
-df2.quick_summary()
-
-#df3 = ReportBuilder(connection, '2021-10-01', '2021-10-31')
-#df3.tickets_report_actualtime()
-#df3.export_excel('actualtime')
+df1 = TicketReportBuilder('2021-11-01', '2021-11-26', relatorio_limpo=False)
+df1.relatorio_tickets()
+df1.media_notas_tempo(solucao=1, fechamento=0)
+df1.calcular_bonus_quantidade()
+df1.exportar_dataframe('tickets')
+df1.notas_finais()
+df1.exportar_dataframe('resumo')

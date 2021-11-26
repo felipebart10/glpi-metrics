@@ -14,9 +14,9 @@ def tickets_report(initial_date, final_date, clean_report=True, convert_seconds=
     :param convert_seconds: opção para converter os segundos em número de série de data/hora usados no excel"""
     
     con = DataBaseConnector()
-    con.set_ssh_tunnel()
-    con.set_database_connection()
-    connection = con.get_database_connection()
+    con.set_tunel_ssh()
+    con.set_conexao_database()
+    connection = con.get_conexao_database()
 
     first_day = f'{initial_date[:4]}-01-01'
 
@@ -96,8 +96,8 @@ def tickets_report(initial_date, final_date, clean_report=True, convert_seconds=
         df.drop(labels=['name', 'date_mod', 'users_id_lastupdater', 'content', 'global_validation', 'ola_waiting_duration', 'olas_id_tto', 'olas_id_ttr', 'olalevels_id_ttr',
                         'internal_time_to_resolve', 'internal_time_to_own', 'validation_percent', 'requesttypes_id'], axis=1, inplace=True)
 
-    con.close_database_connection
-    con.close_ssh_tunnel
+    con.fechar_conexao_database
+    con.fechar_tunel_ssh
 
     return df
 
