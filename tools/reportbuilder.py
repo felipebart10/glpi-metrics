@@ -133,9 +133,12 @@ class TicketReportBuilder(GenericBuilder):
     def __calcular_notas_tempos(self, nome_coluna):
         """Calcula a nota dos valores de tempo desejados
 
-        A fórmula retorna a nota diretamente no data_frame repassado a ela, sendo
-        assim sem return. Neste caso é retornada a nota normalizada, ou seja, um valor
-        que irá variar de 0 a 1.  
+        Procedimento:
+            - delta_tempo é calculado através da diferença do tempo médio gasto para a devida categoria do chamado e o
+            tempo gasto pelo técnico para aquele chamado.
+            - a coluna delta_tempo é normalizada entre valores de 0 a 1.
+            - diferenca_media_vs_gasto é a diferença percentual de tempo gasto com o tempo médio de duração
+         
 
         :param data_frame: dataframe usado no cálculo
         :param col_name: nome da coluna cuja nota será calculada
