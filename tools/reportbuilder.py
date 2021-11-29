@@ -98,7 +98,7 @@ class TicketReportBuilder(GenericBuilder):
         if self.relatorio_limpo:
             df.drop(labels=['name', 'date_mod', 'users_id_lastupdater', 'content', 'global_validation', 'ola_waiting_duration', 'olas_id_tto', 'olas_id_ttr', 'olalevels_id_ttr',
                             'internal_time_to_resolve', 'internal_time_to_own', 'validation_percent', 'requesttypes_id'], axis=1, inplace=True)
-            df = df[df.nome_tecnico != 'Pedro']
+        df = df[df.nome_tecnico != 'Pedro']
 
         self.df_base = df
         self.df_cru = self.df_base.copy(deep=True)
@@ -130,7 +130,7 @@ class TicketReportBuilder(GenericBuilder):
         self.df_base = df
         self.df_cru = self.df_base.copy(deep=True)
 
-    def __calcular_notas_tempos(self, nome_coluna):
+    def __calcular_notas_tempos(self, nome_coluna, limite_inferior=-1, limite_superior=0.4, menor_nota=3, maior_nota=8):
         """Calcula a nota dos valores de tempo desejados
 
         Procedimento:
@@ -146,10 +146,11 @@ class TicketReportBuilder(GenericBuilder):
         """
         self.df_base[f'delta_tempo_{nome_coluna}'] = self.df_base[f'tempo_medio_{nome_coluna}'] - \
             self.df_base[f'tempo_{nome_coluna}']
+        self.df_base[f'delta_tempo_{nome_coluna}'].clip(lower=limite_inferior, upper=limite_superior, inplace=True)
         self.df_base[f'max_mes_{nome_coluna}'] = self.df_base.groupby(['date'])[f'delta_tempo_{nome_coluna}'].transform('max')
-        self.df_base[f'min_mes_{nome_coluna}'] = self.df_base.groupby(['date'])[f'delta_tempo_{nome_coluna}'].transform('min')    
-        self.df_base[f'delta_tempo_{nome_coluna}_normalized'] = (self.df_base[f'delta_tempo_{nome_coluna}'] - self.df_base[f'min_mes_{nome_coluna}']) \
-            / (self.df_base[f'max_mes_{nome_coluna}'] - self.df_base[f'min_mes_{nome_coluna}'])
+        self.df_base[f'min_mes_{nome_coluna}'] = self.df_base.groupby(['date'])[f'delta_tempo_{nome_coluna}'].transform('min')
+        self.df_base[f'delta_tempo_{nome_coluna}_normalized'] = menor_nota + (maior_nota - menor_nota)*(self.df_base[f'delta_tempo_{nome_coluna}'] - self.df_base[f'min_mes_{nome_coluna}']) \
+            / (self.df_base[f'max_mes_{nome_coluna}'] - self.df_base[f'min_mes_{nome_coluna}']) 
         self.df_base[f'diferenca_media_vs_gasto_{nome_coluna}'] = self.df_base[f'delta_tempo_{nome_coluna}'] / self.df_base[f'tempo_medio_{nome_coluna}']
 
         if self.relatorio_limpo:           
@@ -164,14 +165,15 @@ class TicketReportBuilder(GenericBuilder):
         data_frame = self.df_base
         data_frame[f'nota_final_tempos'] = 0
         for nome_tabela, peso in tabela_e_peso.items():
-            self.__calcular_notas_tempos(nome_tabela)
-            data_frame[f'nota_final_tempos'] = data_frame[f'delta_tempo_{nome_tabela}_normalized'] * peso + data_frame[f'nota_final_tempos']
-            if self.relatorio_limpo:
-                data_frame.drop(columns=[f'delta_tempo_{nome_tabela}_normalized'], inplace=True)
-            total_peso += int(peso)        
+            if peso != 0:
+                self.__calcular_notas_tempos(nome_tabela)
+                data_frame[f'nota_final_tempos'] = data_frame[f'delta_tempo_{nome_tabela}_normalized'] * peso + data_frame[f'nota_final_tempos']
+                if self.relatorio_limpo:
+                    data_frame.drop(columns=[f'delta_tempo_{nome_tabela}_normalized'], inplace=True)
+                total_peso += int(peso)        
         data_frame['nota_final_tempos'] = data_frame['nota_final_tempos'] / total_peso
 
-    def calcular_bonus_quantidade(self, bonus_percentual=0.2):
+    def calcular_bonus_quantidade(self, coef_quantidade=0.2):
         """Calcula o bônus devido a quantidade.
 
         A fórmula encontra a quantidade de chamados mensais por técnico, atribuindo uma bonificação percentual que varia de 0 a 20%, sendo o técnico
@@ -181,9 +183,8 @@ class TicketReportBuilder(GenericBuilder):
         :param excluir_coluna: define se a coluna dos valores de bonificação será excluída ou não do relatório final"""
         data_frame = self.df_base
         data_frame['qtde_chamados'] = data_frame.groupby(['date', 'nome_tecnico'])['id'].transform('count')
-        data_frame['bonus'] = 1+bonus_percentual*(data_frame['qtde_chamados'] - data_frame.groupby(['date'])['qtde_chamados'].transform('min')) / (data_frame.groupby(['date'])['qtde_chamados'].transform('max') - data_frame.groupby(['date'])['qtde_chamados'].transform('min'))
+        data_frame['bonus'] = (1-coef_quantidade)+(2*coef_quantidade)*(data_frame['qtde_chamados'] - data_frame.groupby(['date'])['qtde_chamados'].transform('min')) / (data_frame.groupby(['date'])['qtde_chamados'].transform('max') - data_frame.groupby(['date'])['qtde_chamados'].transform('min'))
         data_frame['nota_final_tempos'] = data_frame['nota_final_tempos'] * data_frame['bonus']
-        data_frame['nota_final_tempos'] = (data_frame['nota_final_tempos'] / data_frame.groupby(['date'])['nota_final_tempos'].transform('max'))
         if self.relatorio_limpo:
             data_frame.drop(columns=['bonus', 'qtde_chamados'], inplace=True)
 
@@ -196,6 +197,9 @@ class TicketReportBuilder(GenericBuilder):
             'diferenca_media_vs_gasto_solucao': np.mean,
             'nota_final_tempos': np.mean
         }
+        if 'diferenca_media_vs_gasto_fechamento' not in self.df_base.columns:
+            f.pop('diferenca_media_vs_gasto_fechamento')
+            f.pop('tempo_fechamento')
 
         data_frame = self.df_base
 
