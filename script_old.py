@@ -9,8 +9,8 @@ parser.read('config.ini')
 # # # # # # # # # # # # # # # # SCRIPT PARA GERAÇÃO DE NOTAS - 2021 # # # # # # # # # # # # # # # # #
 
 # Parâmetros
-data_inicial = str(parser['REPORT PARAMETERS']['data_inicial'])
-data_final = str(parser['REPORT PARAMETERS']['data_final'])
+data_inicial = '2021-11-01'
+data_final = '2021-11-30'
 
 # Geração de relatório
 df = tickets_report(data_inicial, data_final)

@@ -1,3 +1,4 @@
 setup/config.ini
 reports/
 tools/querybuilder.py
+tools/query_builder.py
