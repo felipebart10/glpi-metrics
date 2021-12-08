@@ -1,13 +1,18 @@
 SELECT
     t.id AS id_ticket,
-    u2.name as técnico_do_chamado,
-    u.name as técnico_das_tarefas,
+    t.date AS data_chamado,
+    u2.name as tecnico_do_chamado,
+    u.name as tecnico_das_tarefas,
+    ic.name as categoria_chamado,
     sum(att.actual_actiontime) as tempo_via_plugin,
     sum(tt.actiontime) as tempo_via_glpi
 FROM glpi_tickets t
 
 LEFT JOIN glpi_tickettasks tt
 ON t.id = tt.tickets_id
+
+LEFT JOIN glpi_itilcategories ic
+ON t.itilcategories_id = ic.id
 
 LEFT JOIN glpi_tickets_users tu
 ON t.id = tu.tickets_id AND tu.type = 2

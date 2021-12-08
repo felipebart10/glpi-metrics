@@ -244,7 +244,7 @@ class ActualtimeReportBuilder(GenericBuilder):
     def __init__(self, data_inicial: str, data_final: str, query='actualtime'):
         super().__init__(query, data_inicial, data_final)
 
-    def gerar_relatorio(self):
+    def gerar_relatorio(self, excluir_discrepantes=True):
         """Gera relatório de chamados do período desejado com tempos do ActualTime (em desenvolvimento)
 
         Irá retornar o tempo total que cada técnico gastou em cada um dos chamados,
@@ -253,8 +253,9 @@ class ActualtimeReportBuilder(GenericBuilder):
         ou tempo escolhido através do dropdown nativo do GLPI."""
 
         df = self.ler_query()
-        df.loc[df['tempo_via_plugin'] > 1000000000, 'tempo_via_plugin'] = 0
-        df['tempo_eleito'] = np.where(df['tempo_via_plugin'].isnull(), df['tempo_via_glpi'], df['tempo_via_plugin'])
+        if excluir_discrepantes:  
+            df.loc[df['tempo_via_plugin'] > 1000000000, 'tempo_via_plugin'] = 0
+        df['tempo_eleito'] = np.where((df['tempo_via_plugin'].isnull()) | (df['tempo_via_plugin'] == 0), df['tempo_via_glpi'], df['tempo_via_plugin'])
         df['tempo_eleito'] = df['tempo_eleito'] / (24*60*60)
         self.df_base = df
         self.df_cru = self.df_base.copy(deep=True)
