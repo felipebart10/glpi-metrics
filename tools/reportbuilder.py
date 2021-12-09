@@ -1,7 +1,8 @@
 import datetime
 import numpy as np
 import pandas as pd
-from os import replace, startfile
+from os import startfile, getcwd
+import os.path
 from .databaseconnector import DataBaseConnector
 
 class GenericBuilder:
@@ -61,6 +62,7 @@ class GenericBuilder:
         file_name = f".\\reports\\{label}"
         self.df_base.to_excel(file_name, index=False)
         print(f'Arquivo salvo em: {file_name}')
+        print(f'Exportação concluída.\nNome do arquivo: {label}\nPasta: {getcwd()}\\reports ')
         if iniciar_arquivo:
             startfile(file_name)
 
@@ -75,6 +77,10 @@ class GenericBuilder:
         print(f'Arquivo salvo em: {file_name}')
         if iniciar_arquivo:
             startfile(file_name)
+
+    def get_dataframe(self):
+        """Retorna o dataframe para ser manipulado pelo pandas"""
+        return self.df_base
 
 class TicketReportBuilder(GenericBuilder):
     """Classe para criação de relatórios personalizados
@@ -96,8 +102,8 @@ class TicketReportBuilder(GenericBuilder):
         self.relatorio_limpo = relatorio_limpo
         self.converter_segundos = converter_segundos       
 
-    def gerar_relatorio(self):
-        """Gera relatório de chamados do período desejado"""
+    def __calcular_relatorio(self):
+        """Calcula as informações do relatório de chamados do período desejado"""
         df = self.ler_query()
 
         df['tempo_fechamento'] = df['close_delay_stat'] / (24*60*60)
@@ -146,7 +152,7 @@ class TicketReportBuilder(GenericBuilder):
         if self.relatorio_limpo:           
             self.df_base.drop(columns=[f'max_mes_{nome_coluna}', f'min_mes_{nome_coluna}'], inplace=True)
 
-    def media_notas_tempo(self, limite_inferior=-1, limite_superior=0.4, menor_nota=3, maior_nota=8, **tabela_e_peso):
+    def __media_notas_tempo(self, limite_inferior=-1, limite_superior=0.4, menor_nota=3, maior_nota=8, **tabela_e_peso):
         """Calcula a média das notas dos tempos de acordo com os pesos repassados)
 
         :param kwargs **tabela_e_peso: kwargs da forma nome_tabela=peso
@@ -163,22 +169,23 @@ class TicketReportBuilder(GenericBuilder):
                 total_peso += int(peso)        
         data_frame['nota_final_tempos'] = data_frame['nota_final_tempos'] / total_peso
 
-    def calcular_bonus_quantidade(self, coef_quantidade=0.2):
-        """Calcula o bônus devido a quantidade.
+    def __calcular_bonus(self, coef_quantidade=0.2, coef_dificuldade=0.05):
+        """Calcula o bônus devido a quantidade e ao grau de dificuldade da categoria.
 
         A fórmula encontra a quantidade de chamados mensais por técnico, atribuindo uma bonificação percentual que varia de 0 a 20%, sendo o técnico
-        com a maior quantidade de chamados a pessoa que irá receber a maior bonificação. Note que as notas serão geradas já de forma normalizada.
+        com a maior quantidade de chamados a pessoa que irá receber a maior bonificação. Note que as notas serão geradas já de forma normalizada. Ela também
+        irá considerar o grau de dificuldade de categoria.
 
         :param data_frame: data frame onde os bônus serão calculados.
         :param excluir_coluna: define se a coluna dos valores de bonificação será excluída ou não do relatório final"""
         data_frame = self.df_base
         data_frame['qtde_chamados'] = data_frame.groupby(['date', 'nome_tecnico'])['id'].transform('count')
         data_frame['bonus'] = (1-coef_quantidade)+(2*coef_quantidade)*(data_frame['qtde_chamados'] - data_frame.groupby(['date'])['qtde_chamados'].transform('min')) / (data_frame.groupby(['date'])['qtde_chamados'].transform('max') - data_frame.groupby(['date'])['qtde_chamados'].transform('min'))
-        data_frame['nota_final_tempos'] = data_frame['nota_final_tempos'] * data_frame['bonus']
+        data_frame['nota_final'] = data_frame['nota_final_tempos'] * data_frame['bonus'] * (1+(data_frame['peso'] - 3)*coef_dificuldade)
         if self.relatorio_limpo:
             data_frame.drop(columns=['bonus', 'qtde_chamados'], inplace=True)
 
-    def notas_finais(self):
+    def __notas_finais(self):
         """Calcula as notas finais e gera o resumo a inserir no relatório
 
         A função agrupa os dados, cada um de uma forma, contando a quantidade de chamados por técnico, bem como as médias
@@ -191,7 +198,7 @@ class TicketReportBuilder(GenericBuilder):
             'diferenca_media_vs_gasto_fechamento': np.mean,
             'tempo_solucao': np.mean,
             'diferenca_media_vs_gasto_solucao': np.mean,
-            'nota_final_tempos': np.mean
+            'nota_final': np.mean
         }
         if 'diferenca_media_vs_gasto_fechamento' not in self.df_base.columns:
             f.pop('diferenca_media_vs_gasto_fechamento')
@@ -219,25 +226,34 @@ class TicketReportBuilder(GenericBuilder):
             'id': 'Total de chamados',
             'tempo_solucao': 'Tempo de solução médio',
             'diferenca_media_vs_gasto_solucao': 'Diferença de tempo percentual em relação a média anual',
-            'nota_final_tempos': 'Nota final'            
+            'nota_final': 'Nota final'            
         })
         self.df_base = v1
 
-    def relatorio_rapido(self, calcular_nota_final=False):
-        """Tira um relatório com os parâmetros padrões, usando apenas esta chamada. Não indicado paraa
-        quem deseja ter mais controle sobre os pesos e notas
 
-        :param calcular_nota_final: Verdadeiro caso deseja-se tirar apenas o resumo."""
+    def gerar_notas_periodo(self, gerar_resumo=False, label="chamados", limite_inferior=-1, limite_superior=0.4, menor_nota=3, maior_nota=8, coef_quantidade=0.2, coef_dificuldade=0.05, **tabela_e_peso):
+        """Método que gera as informações dos chamados do mês
 
+        Este método agrega todos os procedimentos anteriores para que simplifique o procedimento de cálculo
+        dos diversos parâmetros utilizados nas notas. Todos os parâmetros podem ser ajustados, de forma a gerar um
+        relatório personalizado com os pesos e coeficientes que o usuário julgar necessário alterar.
 
-        self.gerar_relatorio()
-        self.media_notas_tempo(solucao=1, fechamento=1)
-        self.calcular_bonus_quantidade()
-        if calcular_nota_final:
-            self.notas_finais()
-            self.exportar_em_excel('notas')
-        else:
-            self.exportar_em_excel('tickets')
+        - gerar_resumo: Verdadeiro caso deseja-se abrir apenas o resumo.
+        - label: nome da planilha de dados que será salva.
+        - limite_inferior: menor delta_tempo possível. Valores menores serão transformados para este valor.
+        - limite_superior: maior delta_tempo possível. Valores maiores serão transformados para este valor.
+        - menor_nota: menor nota possível. Valores menores serão transformados para este valor.
+        - maior_nota: maior nota possível. Valores maiores serão transformados para este valor.
+        - coef_quantidade: coeficiente do bônus devido a quantidade.
+        - (kwargs)tabela_e_peso: kwargs para definir quais critérios de peso (tempo e/ou fechamento) serão usados,
+        além de seus respectivos pesos. São usados na forma criterio=peso"""
+
+        self.__calcular_relatorio()
+        self.__media_notas_tempo(limite_inferior, limite_superior, menor_nota, maior_nota,  **tabela_e_peso)
+        self.__calcular_bonus(coef_quantidade, coef_dificuldade)
+        
+        if gerar_resumo:
+            self.__notas_finais()    
 
 class ActualtimeReportBuilder(GenericBuilder):
     """Geração de relatórios com tempo real de trabalho"""
@@ -257,5 +273,6 @@ class ActualtimeReportBuilder(GenericBuilder):
             df.loc[df['tempo_via_plugin'] > 1000000000, 'tempo_via_plugin'] = 0
         df['tempo_eleito'] = np.where((df['tempo_via_plugin'].isnull()) | (df['tempo_via_plugin'] == 0), df['tempo_via_glpi'], df['tempo_via_plugin'])
         df['tempo_eleito'] = df['tempo_eleito'] / (24*60*60)
+        df = df[df.tecnico_das_tarefas != 'pedro']
         self.df_base = df
         self.df_cru = self.df_base.copy(deep=True)

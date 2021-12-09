@@ -1,4 +1,4 @@
-SELECT t.*, ic.name AS nome_categoria, rt.name AS origem, u.firstname AS nome_tecnico, c.avg_time AS tempo_medio_fechamento, d.avg_time AS tempo_medio_solucao  
+SELECT t.*, ic.name AS nome_categoria, p.pesofield AS peso, rt.name AS origem, u.firstname AS nome_tecnico, c.avg_time AS tempo_medio_fechamento, d.avg_time AS tempo_medio_solucao  
 FROM glpi_tickets t
 
 LEFT JOIN glpi_itilcategories ic
@@ -13,6 +13,9 @@ ON t.requesttypes_id = rt.id
 
 LEFT JOIN glpi_users u
 ON u.id = tu.users_id
+
+LEFT JOIN glpi_plugin_fields_itilcategorypesos p
+ON t.itilcategories_id = p.items_id
 
 LEFT JOIN (
     SELECT ic.id, ic.completename, avg(t.close_delay_stat) AS avg_time FROM glpi_tickets t 

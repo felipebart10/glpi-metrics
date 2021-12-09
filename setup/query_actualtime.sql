@@ -1,5 +1,5 @@
 SELECT
-    t.id AS id_ticket,
+    t.id,
     t.date AS data_chamado,
     u2.name as tecnico_do_chamado,
     u.name as tecnico_das_tarefas,
