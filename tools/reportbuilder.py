@@ -2,7 +2,6 @@ import datetime
 import numpy as np
 import pandas as pd
 from os import startfile, getcwd
-import os.path
 from .databaseconnector import DataBaseConnector
 
 class GenericBuilder:
@@ -273,6 +272,6 @@ class ActualtimeReportBuilder(GenericBuilder):
             df.loc[df['tempo_via_plugin'] > 1000000000, 'tempo_via_plugin'] = 0
         df['tempo_eleito'] = np.where((df['tempo_via_plugin'].isnull()) | (df['tempo_via_plugin'] == 0), df['tempo_via_glpi'], df['tempo_via_plugin'])
         df['tempo_eleito'] = df['tempo_eleito'] / (24*60*60)
-        df = df[df.tecnico_das_tarefas != 'pedro']
+        #df = df[df.tecnico_das_tarefas != 'pedro']
         self.df_base = df
         self.df_cru = self.df_base.copy(deep=True)

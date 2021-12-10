@@ -1,7 +1,6 @@
 SELECT
     t.id,
     tt.date AS data_tarefa,
-    att.actual_end AS ultima_modificacao,
     u2.name as tecnico_do_chamado,
     u.name as tecnico_das_tarefas,
     ic.name as categoria_chamado,
@@ -27,8 +26,8 @@ ON u.id = tt.users_id_tech
 LEFT JOIN glpi_plugin_actualtime_tasks att
 ON tt.id = att.tasks_id
 
-WHERE (DATE(att.actual_begin) BETWEEN %(initial_date)s AND %(final_date)s) AND
-(DATE(att.actual_end) BETWEEN %(initial_date)s AND %(final_date)s) AND
+WHERE (DATE(tt.date) BETWEEN %(initial_date)s AND %(final_date)s) AND
+
 tt.users_id_tech != 0
 
 GROUP BY t.id, tt.users_id_tech
