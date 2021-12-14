@@ -36,4 +36,4 @@ LEFT JOIN (
 ON t.itilcategories_id = d.id
 
 WHERE (DATE(t.date) BETWEEN %(initial_date)s AND %(final_date)s) AND
-t.status = 6 
+(t.status = 6 OR t.status = 5) 

@@ -28,7 +28,7 @@ LEFT JOIN glpi_plugin_actualtime_tasks att
 ON tt.id = att.tasks_id
 
 WHERE (DATE(att.actual_begin) BETWEEN %(initial_date)s AND %(final_date)s) AND
-(DATE(att.actual_end) BETWEEN %(initial_date)s AND %(final_date)s) AND
-tt.users_id_tech != 0
+(DATE(att.actual_end) BETWEEN %(initial_date)s AND %(final_date)s)
+AND tt.users_id_tech != 0
 
-GROUP BY t.id, tt.users_id_tech
+GROUP BY t.id, tt.users_id_tech, date(att.actual_end)

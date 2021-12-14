@@ -59,6 +59,12 @@ class GenericBuilder:
         """
         label = f"{label.replace(' ','_')}_{datetime.date.today()}.xlsx"
         file_name = f".\\reports\\{label}"
+        #writer = pd.ExcelWriter(file_name,
+        #engine='xlsxwriter',
+        #datetime_format='dd/mm/yyyy',
+        #date_format='dd/mm/yyyy')
+        #self.df_base.to_excel(writer, sheet_name='Relatório', index=False)
+        #writer.save()
         self.df_base.to_excel(file_name, index=False)
         print(f'Arquivo salvo em: {file_name}')
         print(f'Exportação concluída.\nNome do arquivo: {label}\nPasta: {getcwd()}\\reports ')
@@ -80,6 +86,9 @@ class GenericBuilder:
     def get_dataframe(self):
         """Retorna o dataframe para ser manipulado pelo pandas"""
         return self.df_base
+
+    def get_dtypes(self):
+        return self.df_base.dtypes
 
 class TicketReportBuilder(GenericBuilder):
     """Classe para criação de relatórios personalizados
@@ -121,7 +130,8 @@ class TicketReportBuilder(GenericBuilder):
             df.drop(labels=['name', 'date_mod', 'users_id_lastupdater', 'content', 'global_validation', 'ola_waiting_duration', 'olas_id_tto', 'olas_id_ttr', 'olalevels_id_ttr',
                             'internal_time_to_resolve', 'internal_time_to_own', 'validation_percent', 'requesttypes_id'], axis=1, inplace=True)
         
-        df = df[df.nome_tecnico != 'Pedro']
+        #df = df[df.nome_tecnico != 'Pedro']
+        df.update(df.select_dtypes('datetime').stack().dt.date.unstack())
         self.df_base = df
         self.df_cru = self.df_base.copy(deep=True)
 
@@ -259,7 +269,7 @@ class ActualtimeReportBuilder(GenericBuilder):
     def __init__(self, data_inicial: str, data_final: str, query='actualtime'):
         super().__init__(query, data_inicial, data_final)
 
-    def gerar_relatorio(self, excluir_discrepantes=True):
+    def gerar_relatorio(self, gerar_resumo=False, excluir_discrepantes=True):
         """Gera relatório de chamados do período desejado com tempos do ActualTime (em desenvolvimento)
 
         Irá retornar o tempo total que cada técnico gastou em cada um dos chamados,
@@ -273,5 +283,19 @@ class ActualtimeReportBuilder(GenericBuilder):
         df['tempo_eleito'] = np.where((df['tempo_via_plugin'].isnull()) | (df['tempo_via_plugin'] == 0), df['tempo_via_glpi'], df['tempo_via_plugin'])
         df['tempo_eleito'] = df['tempo_eleito'] / (24*60*60)
         #df = df[df.tecnico_das_tarefas != 'pedro']
+        df['data_tarefa'] = df['data_tarefa'].dt.strftime('%d/%m/%Y')
+        df['ultima_modificacao'] = df['ultima_modificacao'].dt.strftime('%d/%m/%Y')
         self.df_base = df
         self.df_cru = self.df_base.copy(deep=True)
+        if gerar_resumo:
+            self.__resumir_relatorio()
+
+    def __resumir_relatorio(self):
+        f = {
+            'id': 'nunique',
+            'tempo_eleito': np.sum
+        }
+        data_frame = self.df_base
+        g = data_frame.groupby(['tecnico_das_tarefas', 'ultima_modificacao'])
+        v1 = g.agg(f)
+        self.df_base = v1.reset_index()

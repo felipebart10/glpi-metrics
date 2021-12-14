@@ -46,4 +46,4 @@ LEFT JOIN (
 ON t.id = o.id AND o.nome_observador IS NOT NULL
 
 WHERE (DATE(t.date) BETWEEN %(initial_date)s AND %(final_date)s) AND
-t.status = 6 
+(t.status = 6 OR t.status = 5)
