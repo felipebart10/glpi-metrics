@@ -1,9 +1,9 @@
 SELECT
     t.id,
-    tt.date AS data_tarefa,
-    att.actual_end AS ultima_modificacao,
-    u2.name as tecnico_do_chamado,
-    u.name as tecnico_das_tarefas,
+    date(tt.date) AS data_tarefa,
+    date(att.actual_end) AS ultima_modificacao,
+    u2.firstname as tecnico_do_chamado,
+    u.firstname as tecnico_das_tarefas,
     ic.name as categoria_chamado,
     sum(att.actual_actiontime) as tempo_via_plugin,
     sum(tt.actiontime) as tempo_via_glpi

@@ -2,3 +2,4 @@ setup/config.ini
 reports/
 tools/querybuilder.py
 tools/query_builder.py
+tools/toggl_reader.py
