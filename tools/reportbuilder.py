@@ -272,7 +272,6 @@ class TicketReportBuilder(GenericBuilder):
             lista_para_exclusao = list(set(self.df_base.columns) - set(lista_campos))
             self.df_base.drop(lista_para_exclusao, axis=1, inplace=True)
             
-
 class ActualtimeReportBuilder(GenericBuilder):
     """Geração de relatórios com tempo real de trabalho"""
     def __init__(self, data_inicial: str, data_final: str, query='actualtime'):
@@ -321,3 +320,44 @@ class ActualtimeReportBuilder(GenericBuilder):
             'tempo_eleito2': 'Média tempo trabalhado GLPI (por chamado)'
         })
         self.df_base = v1
+
+class ChangeReportBuilder(GenericBuilder):
+
+    """Geração de relatórios de Mudanças
+
+    Essa classe servirá para gerar relatórios de mudanças
+
+    Atributos:
+        connection: conexão a qual se deseja usar para extrair dados
+        initial_date: data inicial dos dados
+        final_date: data final dos dados
+        label: nome do arquivo a ser exportado
+        relatorio_limpo: variável booleana para definir se as colunas inutilizadas serão excluídas ou mantidas.
+        convert_seconds: converte os segundos para o valor decimal que o excel usa para calcular o tempo
+    """
+    def __init__(self, data_inicial: str, data_final: str, query:str='changes', converter_segundos: bool = True):
+        super().__init__(query, data_inicial, data_final)
+        self.converter_segundos = converter_segundos
+
+    def gerar_relatorio(self):
+        self.ler_query()
+
+class ProblemReportBuilder(GenericBuilder):
+    """Geração de relatórios de Problemas
+
+    Essa classe servirá para gerar relatórios de mudanças
+
+    Atributos:
+        connection: conexão a qual se deseja usar para extrair dados
+        initial_date: data inicial dos dados
+        final_date: data final dos dados
+        label: nome do arquivo a ser exportado
+        relatorio_limpo: variável booleana para definir se as colunas inutilizadas serão excluídas ou mantidas.
+        convert_seconds: converte os segundos para o valor decimal que o excel usa para calcular o tempo
+    """
+    def __init__(self, data_inicial: str, data_final: str, query:str='problems', converter_segundos: bool = True):
+        super().__init__(query, data_inicial, data_final)
+        self.converter_segundos = converter_segundos
+
+    def gerar_relatorio(self):
+        self.ler_query()
