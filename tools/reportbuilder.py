@@ -31,6 +31,9 @@ class GenericBuilder:
         connector_object.set_conexao_database()
         self.con = connector_object.get_conexao_database()
 
+    def set_dataframe(self, df):
+        self.df_base = df
+
     def ler_query(self):
         """Lê a query passada no construtor da classe.
         
@@ -271,7 +274,57 @@ class TicketReportBuilder(GenericBuilder):
             'nota_final']
             lista_para_exclusao = list(set(self.df_base.columns) - set(lista_campos))
             self.df_base.drop(lista_para_exclusao, axis=1, inplace=True)
-            
+     
+    def gerar_relatorio_combinado(self, excluir_pedro=True, gerar_resumo=False, relatorio_limpo=True, label="chamados", limite_inferior=-1, limite_superior=0.4, menor_nota=3, maior_nota=8, coef_quantidade=0.2, coef_dificuldade=0.05, **tabela_e_peso):
+        """Método que gera as informações dos chamados do mês para combinar com dados de problemas e mudanças
+
+        Este método agrega todos os procedimentos anteriores para que simplifique o procedimento de cálculo
+        dos diversos parâmetros utilizados nas notas. Todos os parâmetros podem ser ajustados, de forma a gerar um
+        relatório personalizado com os pesos e coeficientes que o usuário julgar necessário alterar.
+
+        - gerar_resumo: Verdadeiro caso deseja-se abrir apenas o resumo.
+        - label: nome da planilha de dados que será salva.
+        - limite_inferior: menor delta_tempo possível. Valores menores serão transformados para este valor.
+        - limite_superior: maior delta_tempo possível. Valores maiores serão transformados para este valor.
+        - menor_nota: menor nota possível. Valores menores serão transformados para este valor.
+        - maior_nota: maior nota possível. Valores maiores serão transformados para este valor.
+        - coef_quantidade: coeficiente do bônus devido a quantidade.
+        - (kwargs)tabela_e_peso: kwargs para definir quais critérios de peso (tempo e/ou fechamento) serão usados,
+        além de seus respectivos pesos. São usados na forma criterio=peso"""
+
+        self.__calcular_relatorio(excluir_pedro)
+        self.__media_notas_tempo(limite_inferior, limite_superior, menor_nota, maior_nota,  **tabela_e_peso)
+        self.__calcular_bonus(coef_quantidade, coef_dificuldade)
+        
+        if gerar_resumo:
+            self.__notas_finais()
+
+        if relatorio_limpo:
+            lista_campos = [
+                'id',
+                'name',
+                'entities_id',
+                'date',
+                'closedate',
+                'solvedate',
+                'date_mod',
+                'users_id_lastupdater',
+                'users_id_recipient',
+                'urgency',
+                'impact',
+                'priority',
+                'itilcategories_id',
+                'type',
+                'begin_waiting_date',
+                'waiting_duration',
+                'close_delay_stat',
+                'solve_delay_stat',
+                'nome_tecnico',
+                'nome_categoria',
+                'peso'
+            ]
+            lista_para_exclusao = list(set(self.df_base.columns) - set(lista_campos))
+            self.df_base.drop(lista_para_exclusao, axis=1, inplace=True)            
 class ActualtimeReportBuilder(GenericBuilder):
     """Geração de relatórios com tempo real de trabalho"""
     def __init__(self, data_inicial: str, data_final: str, query='actualtime'):
@@ -340,7 +393,34 @@ class ChangeReportBuilder(GenericBuilder):
         self.converter_segundos = converter_segundos
 
     def gerar_relatorio(self):
-        self.ler_query()
+        df = self.ler_query()
+        df['type'] = 'Mudança'
+        self.df_base = df
+        lista_campos = [
+            'id',
+            'name',
+            'entities_id',
+            'date',
+            'closedate',
+            'solvedate',
+            'date_mod',
+            'users_id_lastupdater',
+            'users_id_recipient',
+            'urgency',
+            'impact',
+            'priority',
+            'itilcategories_id',
+            'type',
+            'begin_waiting_date',
+            'waiting_duration',
+            'close_delay_stat',
+            'solve_delay_stat',
+            'nome_tecnico',
+            'nome_categoria',
+            'peso'
+        ]
+        lista_para_exclusao = list(set(self.df_base.columns) - set(lista_campos))
+        self.df_base.drop(lista_para_exclusao, axis=1, inplace=True)
 
 class ProblemReportBuilder(GenericBuilder):
     """Geração de relatórios de Problemas
@@ -360,4 +440,31 @@ class ProblemReportBuilder(GenericBuilder):
         self.converter_segundos = converter_segundos
 
     def gerar_relatorio(self):
-        self.ler_query()
+        df = self.ler_query()
+        df['type'] = 'Problema'
+        self.df_base = df
+        lista_campos = [
+            'id',
+            'name',
+            'entities_id',
+            'date',
+            'closedate',
+            'solvedate',
+            'date_mod',
+            'users_id_lastupdater',
+            'users_id_recipient',
+            'urgency',
+            'impact',
+            'priority',
+            'itilcategories_id',
+            'type',
+            'begin_waiting_date',
+            'waiting_duration',
+            'close_delay_stat',
+            'solve_delay_stat',
+            'nome_tecnico',
+            'nome_categoria',
+            'peso'
+        ]
+        lista_para_exclusao = list(set(self.df_base.columns) - set(lista_campos))
+        self.df_base.drop(lista_para_exclusao, axis=1, inplace=True)
