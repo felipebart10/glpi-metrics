@@ -39,13 +39,19 @@ class GenericBuilder:
         
         Utiliza a conexão aberta para ler a query de um arquivo .sql e retorna um DataFrame pandas para ser
         trabalhado."""
-        first_day = f'{self.data_inicial[:4]}-01-01'
+        if len(self.data_final) > 0:
+            first_day = f'{int(self.data_final[:4])-1}-01-01'
+            last_day = f'{int(self.data_final[:4])-1}-12-31'
+        else:
+            first_day = ''
+            last_day = ''
         query = open(f"setup/query_{self.query}.sql", "r").read()
         df = pd.read_sql_query(
             sql=query,
             con=self.con,
             params={
                 "first_day": first_day,
+                "last_day": last_day,
                 "initial_date": self.data_inicial,
                 "final_date": self.data_final
                 }

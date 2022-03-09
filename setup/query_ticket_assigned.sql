@@ -21,7 +21,7 @@ LEFT JOIN (
     SELECT ic.id, ic.completename, avg(t.close_delay_stat) AS avg_time FROM glpi_tickets t 
     LEFT JOIN glpi_itilcategories ic 
     ON t.itilcategories_id = ic.id 
-    WHERE (DATE(t.date) BETWEEN %(first_day)s AND %(final_date)s)
+    WHERE (DATE(t.date) BETWEEN %(first_day)s AND %(last_day)s)
     GROUP BY t.itilcategories_id
     ) c
 ON t.itilcategories_id = c.id    
@@ -30,7 +30,7 @@ LEFT JOIN (
     SELECT ic.id, ic.completename, avg(t.solve_delay_stat) AS avg_time FROM glpi_tickets t 
     LEFT JOIN glpi_itilcategories ic 
     ON t.itilcategories_id = ic.id 
-    WHERE (DATE(t.date) BETWEEN %(first_day)s AND %(final_date)s)
+    WHERE (DATE(t.date) BETWEEN %(first_day)s AND %(last_day)s)
     GROUP BY t.itilcategories_id
     ) d
 ON t.itilcategories_id = d.id

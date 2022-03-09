@@ -1,9 +1,10 @@
 import pandas as pd
 from tools.reportbuilder import TicketReportBuilder, ChangeReportBuilder, ProblemReportBuilder, ActualtimeReportBuilder, GenericBuilder
-
+from tools.toggl_reader import toggl_report
+import datetime
 # Intervalo de tempo desejado:
-data_inicial = '2021-01-01'
-data_final = '2022-01-11'
+data_inicial = '2019-01-01'
+data_final = '2022-12-31'
 
 # Agrega funções de script num arquivo só. Altere parâmetros internos para personalizar o relatório.
 
@@ -48,8 +49,11 @@ def salvar_relatorio_combinado(data_inicial, data_final):
     df.exportar_dataframe('relatório combinado')
 
 salvar_relatorio_tickets(data_inicial, data_final)
-salvar_relatorio_mudancas(data_inicial, data_final)
-salvar_relatorio_problemas(data_inicial, data_final)
+#salvar_relatorio_mudancas(data_inicial, data_final)
+#salvar_relatorio_problemas(data_inicial, data_final)
 salvar_relatorio_actualtime(data_inicial, data_final)
 salvar_relatorio_usuarios()
-#salvar_relatorio_combinado(data_inicial, data_final)
+
+if (datetime.date.fromisoformat(data_final) - datetime.date.fromisoformat(data_inicial)).days < 365:
+    toggl_report(data_inicial, data_final)
+
