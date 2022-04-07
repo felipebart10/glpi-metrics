@@ -3,8 +3,8 @@ from tools.reportbuilder import TicketReportBuilder, ChangeReportBuilder, Proble
 from tools.toggl_reader import toggl_report
 import datetime
 # Intervalo de tempo desejado:
-data_inicial = '2019-01-01'
-data_final = '2022-12-31'
+data_final = str(datetime.date.today().replace(day=1))
+data_inicial = str(datetime.date.today().replace(day=1) - datetime.timedelta(days=365))
 
 # Agrega funções de script num arquivo só. Altere parâmetros internos para personalizar o relatório.
 
@@ -48,12 +48,22 @@ def salvar_relatorio_combinado(data_inicial, data_final):
     df.set_dataframe(new_df)
     df.exportar_dataframe('relatório combinado')
 
-salvar_relatorio_tickets(data_inicial, data_final)
-#salvar_relatorio_mudancas(data_inicial, data_final)
-#salvar_relatorio_problemas(data_inicial, data_final)
-salvar_relatorio_actualtime(data_inicial, data_final)
-salvar_relatorio_usuarios()
 
-if (datetime.date.fromisoformat(data_final) - datetime.date.fromisoformat(data_inicial)).days < 365:
-    toggl_report(data_inicial, data_final)
+def gerar_relatorio(tipo='anual'):
+    try:
+        data_final = str((datetime.date.today().replace(day=1) + datetime.timedelta(days=32)).replace(day=1) - datetime.timedelta(days=1))
+        if tipo == 'anual':        
+            data_inicial = str((data_final - datetime.timedelta(days=360)).replace(day=1))
+            toggl_report(data_inicial, data_final)
+        elif tipo == 'geral':
+            data_inicial = '2019-01-01'
+        salvar_relatorio_tickets(data_inicial, data_final)
+        #salvar_relatorio_mudancas(data_inicial, data_final)
+        #salvar_relatorio_problemas(data_inicial, data_final)
+        salvar_relatorio_actualtime(data_inicial, data_final)
+        salvar_relatorio_usuarios()
+    except:
+        print('Opção inválida. selecione "anual" ou "geral"')
 
+gerar_relatorio('geral')
+        

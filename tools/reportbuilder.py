@@ -234,8 +234,6 @@ class TicketReportBuilder(GenericBuilder):
             'nota_final': 'Nota final'            
         })
         self.df_base = v1
-
-
     def gerar_notas_periodo(self, excluir_pedro=True, gerar_resumo=False, relatorio_limpo=True, label="chamados", limite_inferior=-1, limite_superior=0.4, menor_nota=3, maior_nota=8, coef_quantidade=0.2, coef_dificuldade=0.05, **tabela_e_peso):
         """Método que gera as informações dos chamados do mês
 
